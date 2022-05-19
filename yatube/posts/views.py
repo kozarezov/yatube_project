@@ -15,8 +15,7 @@ def index(request):
 def group_posts(request, slug):
     """Возвращает посты, отфильтрованные по группам."""
     group = get_object_or_404(Group, slug=slug)
-    posts = (Post.objects.select_related('group')
-             .filter(group=group)[:POSTS_PER_PAGE])
+    posts = group.group_posts.all()[:POSTS_PER_PAGE]
     context = {
         'group': group,
         'posts': posts,
