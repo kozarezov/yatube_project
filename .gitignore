@@ -130,7 +130,3 @@ dmypy.json
 
 # VS code
 .vscode/
-
-# Statics
-static/
-media/
