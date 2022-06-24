@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from posts.models import Group, Post
 
 User = get_user_model()
@@ -32,37 +33,41 @@ class PostFormTests(TestCase):
 
     def test_forms_create(self):
         """Cоздаётся новая запись в базе данных."""
-        count_post = Post.objects.count()
+        count_posts = Post.objects.count()
         form_fields = {
             'text': 'Тестовый пост 1',
             'group': self.group.id,
         }
+
         response = self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_fields
         )
+
         self.assertRedirects(response, reverse(
                              'posts:profile', kwargs={'username': self.user}))
-        self.assertEqual(Post.objects.count(), count_post + 1)
-        self.assertTrue(Post.objects.get(text=form_fields['text']))
-        self.assertEqual(form_fields['text'],
-                         Post.objects.get(text=form_fields['text']).text)
+        self.assertEqual(Post.objects.count(), count_posts + 1)
+        self.assertTrue(Post.objects.filter(text=form_fields['text']).
+                        filter(group=form_fields['group']).
+                        filter(author=self.user).exists())
 
     def test_forms_edit(self):
         """Можно изменить существующую запись."""
-        count_post = Post.objects.count()
+        count_posts = Post.objects.count()
         form_fields = {
             'text': 'Измененный пост',
             'group': self.group.id,
         }
+
         response = self.authorized_client.post(
             reverse('posts:post_edit',
                     kwargs={'post_id': self.post.id}),
             data=form_fields
         )
+
         self.assertRedirects(response, reverse('posts:post_detail',
                              kwargs={'post_id': self.post.id}))
-        self.assertEqual(Post.objects.count(), count_post)
-        self.assertTrue(Post.objects.get(id=self.post.id))
-        self.assertEqual(form_fields['text'],
-                         Post.objects.get(id=self.post.id).text)
+        self.assertEqual(Post.objects.count(), count_posts)
+        self.assertTrue(Post.objects.filter(text=form_fields['text']).
+                        filter(group=form_fields['group']).
+                        filter(author=self.user).exists())

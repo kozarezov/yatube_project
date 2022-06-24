@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+
 from posts.models import Group, Post
 
 User = get_user_model()
@@ -19,13 +20,14 @@ class PostModelTest(TestCase):
         )
         cls.post = Post.objects.create(
             author=cls.user,
-            text='Тестовый пост',
+            text='Тестовый пост в котором больше 15 символов',
             group=cls.group
         )
 
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
         post = PostModelTest.post
+
         self.assertEqual(str(post), post.text[:15])
 
     def test_verbose_name(self):
@@ -37,6 +39,7 @@ class PostModelTest(TestCase):
             'author': 'Автор',
             'group': 'Группа'
         }
+
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
                 self.assertEqual(
@@ -49,6 +52,7 @@ class PostModelTest(TestCase):
             'text': 'Текст нового поста',
             'group': 'Группа, к которой будет относиться пост'
         }
+
         for field, expected_value in field_help_texts.items():
             with self.subTest(field=field):
                 self.assertEqual(
@@ -80,6 +84,7 @@ class GroupModelTest(TestCase):
             'slug': 'Уникальный url',
             'description': 'Описание группы'
         }
+
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
                 self.assertEqual(
