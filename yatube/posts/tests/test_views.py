@@ -74,10 +74,10 @@ class PostViewTests(TestCase):
 
     def test_views_context(self):
         """Шаблоны group и profile сформированы с правильным контекстом."""
-        urls = [
+        urls = {
             self.group_url,
             self.profile_url
-        ]
+        }
 
         for url in urls:
             with self.subTest(url=url):
@@ -92,10 +92,10 @@ class PostViewTests(TestCase):
 
     def test_views_in_page(self):
         """Посты на верных страницах."""
-        urls = [
+        urls = {
             self.group_url,
             self.profile_url,
-        ]
+        }
 
         for url in urls:
             with self.subTest(url=url):
@@ -169,12 +169,12 @@ class PostViewPaginatorTests(TestCase):
     def test_views_context(self):
         """Шаблоны сформирован с правильным пагинатором."""
         remains_post_count = Post.objects.count() - settings.POSTS_PER_PAGE
-        urls = [
+        urls = {
             reverse('posts:index'),
             reverse('posts:group_list', kwargs={'slug': self.group.slug}),
             reverse('posts:profile',
                     kwargs={'username': self.user.username})
-        ]
+        }
 
         for url in urls:
             with self.subTest(url=url):

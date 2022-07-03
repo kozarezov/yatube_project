@@ -11,6 +11,7 @@
         Дата публикации: {{ post.pub_date|date:"d E Y" }}
       </li>
     </ul>
+    {% include 'includes/image.html' %}
     <p>{{ post.text }}</p>
     <a href="{% url 'posts:post_detail' post.id %}">подробная информация </a>
   </article>
