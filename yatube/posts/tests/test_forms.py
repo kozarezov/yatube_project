@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post
+from posts.models import Group, Post, Comment
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -115,3 +115,41 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, reverse(
                              'posts:profile', kwargs={'username': self.user}))
         self.assertEqual(Post.objects.count(), count_posts + 1)
+
+    def test_forms_create_comments_authorized(self):
+        """Создается запись comments в базе данных."""
+        count = Comment.objects.count()
+        form_fields = {
+            'text': 'Тестовый коментарий',
+        }
+
+        response = self.authorized_client.post(
+            reverse('posts:add_comment',
+                    kwargs={'post_id': self.post.id}),
+            data=form_fields
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
+        )
+        self.assertEqual(Comment.objects.count(), count + 1)
+        self.assertTrue(Comment.objects.filter(text=form_fields['text']).
+                        filter(author=self.user).
+                        filter(post=self.post).exists())
+
+    def test_forms_create_comments_guest(self):
+        """Не создает запись, если пользователь не авторизован."""
+        count = Comment.objects.count()
+        form_fields = {
+            'text': 'Тестовый коментарий',
+        }
+        url = reverse('posts:add_comment', kwargs={'post_id': self.post.id})
+
+        response_guest = self.guest_client.post(url, data=form_fields)
+
+        self.assertRedirects(response_guest,
+                             f'/auth/login/?next={url}')
+        self.assertNotEqual(Post.objects.count(), count)
+        self.assertFalse(Post.objects.filter(
+                         text=form_fields['text']).exists())

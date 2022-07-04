@@ -82,3 +82,11 @@ class PostURLTests(TestCase):
         response = self.guest_client.get('/unexisting_page/')
 
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+
+    def test_urls_comment_redirect_anonymous(self):
+        """Проверка доступа к комментированию поста неавторизованного."""
+        url = f'/posts/{self.post.id}/comment/'
+        response_guest = self.guest_client.get(url)
+
+        self.assertRedirects(response_guest,
+                             f'/auth/login/?next={url}')
