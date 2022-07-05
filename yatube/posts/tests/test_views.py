@@ -9,7 +9,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.core.cache import cache
 
-from posts.models import Group, Post
+from posts.models import Group, Post, Follow
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -63,6 +63,11 @@ class PostViewTests(TestCase):
                                       kwargs={'post_id': '1'})
         cls.post_edit_url = reverse('posts:post_edit',
                                     kwargs={'post_id': '1'})
+        cls.follow_index_url = reverse('posts:follow_index')
+        cls.profile_follow_url = reverse('posts:profile_follow',
+                                         kwargs={'username': cls.user_1})
+        cls.profile_unfollow_url = reverse('posts:profile_unfollow',
+                                           kwargs={'username': cls.user_1})
 
     @classmethod
     def tearDownClass(cls):
@@ -70,7 +75,8 @@ class PostViewTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
-        """Создаем авторизованного пользователя."""
+        """Создаем авторизованного и не авторизованного пользователя."""
+        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
@@ -197,6 +203,62 @@ class PostViewTests(TestCase):
         response_after_clear = self.authorized_client.get(self.index_url)
 
         self.assertNotEqual(response.content, response_after_clear.content)
+
+    def test_views_follow(self):
+        """Тест подписки на автора."""
+        username_1 = self.user_1.username
+        self.authorized_client.post(
+            self.profile_follow_url,
+            data={'username': username_1}
+        )
+        username = self.user.username
+        self.guest_client.post(
+            self.profile_follow_url,
+            data={'username': username}
+        )
+        count = Follow.objects.all().count()
+
+        self.assertEqual(count, 1)
+
+    def test_views_unfollow(self):
+        """Тест отписки от автора."""
+        username = self.user_1.username
+        self.authorized_client.post(
+            self.profile_follow_url,
+            data={'username': username}
+        )
+        count = Follow.objects.all().count()
+
+        self.assertEqual(count, 1)
+        self.authorized_client.delete(
+            self.profile_unfollow_url,
+            data={'username': username}
+        )
+        counter = Follow.objects.all().count()
+
+        self.assertEqual(counter, 0)
+
+    def test_views_follow_index(self):
+        """Запись отображается у подписанного пользователя."""
+        username = self.user.username
+        self.authorized_client.post(
+            self.profile_follow_url,
+            data={'username': username}
+        )
+        Post.objects.create(
+            text='Тест (подписка)',
+            author=self.user_1
+        )
+
+        response = self.authorized_client.get(self.follow_index_url)
+        response_guest = self.guest_client.get(self.follow_index_url)
+        result = False
+        for object in response.context['page_obj']:
+            if 'Тест (подписка)' == object.text:
+                result = True
+
+        self.assertTrue(result)
+        self.assertIsNone(response_guest.context)
 
 
 class PostViewPaginatorTests(TestCase):
