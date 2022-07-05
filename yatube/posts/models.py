@@ -52,3 +52,11 @@ class Comment(models.Model):
                                related_name='author', verbose_name='Автор')
     text = models.TextField('Текст комментария', help_text='Текст комментария')
     created = models.DateTimeField('Дата комментария', auto_now_add=True)
+
+
+class Follow(models.Model):
+    """Подписка на авторов."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name='follower', verbose_name='Подписчик')
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               related_name='following', verbose_name='Автор')

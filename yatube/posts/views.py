@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_page
 
 from .forms import PostForm, CommentForm
-from .models import Group, Post, Comment
+from .models import Group, Post, Comment, Follow
 from .utils import paginate_pls
 
 User = get_user_model()
@@ -35,10 +36,15 @@ def profile(request, username):
     post_list = (Post.objects.select_related('group', 'author')
                  .filter(author__username=username))
     post_count = post_list.count()
+    following = False
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user, author=post_author).exists()
     context = {
         'page_obj': paginate_pls(request, post_list),
         'post_count': post_count,
         'post_author': post_author,
+        'following': following,
     }
     return render(request, 'posts/profile.html', context)
 
@@ -96,3 +102,31 @@ def add_comment(request, post_id):
         comment.post = post
         comment.save()
     return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    """Получение постов авторов в подписках из базы данных."""
+    post_list = (Post.objects.select_related('group', 'author').
+                 filter(author__following__user=request.user))
+    context = {
+        'page_obj': paginate_pls(request, post_list),
+    }
+    return render(request, 'posts/follow.html', context)
+
+
+@login_required
+def profile_follow(request, username):
+    """Подписаться на автора."""
+    author = get_object_or_404(User, username=username)
+    if request.user != author:
+        Follow.objects.get_or_create(user=request.user, author=author)
+    return redirect('posts:profile', username=username)
+
+
+@login_required
+def profile_unfollow(request, username):
+    """Отписаться от автора."""
+    author = get_object_or_404(User, username=username)
+    Follow.objects.filter(user=request.user, author=author).delete()
+    return redirect('posts:profile', username=username)

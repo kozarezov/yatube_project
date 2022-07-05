@@ -1,4 +1,3 @@
-from email.mime import image
 import shutil
 import tempfile
 
@@ -8,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.core.cache import cache
 
 from posts.models import Group, Post
 
@@ -15,6 +15,7 @@ User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostViewTests(TestCase):
     """Тест view приложения posts."""
 
@@ -179,10 +180,23 @@ class PostViewTests(TestCase):
         for url in urls:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
-                if response.context.get('object_list'):
-                    self.assertTrue(response.context['object_list'][0].image)
+                if response.context.get('page_obj'):
+                    self.assertTrue(response.context['page_obj'][0].image)
                 else:
                     self.assertTrue(response.context['post'].image)
+
+    def test_views_cashed(self):
+        """Содержимое главной страницы кэшируется."""
+        response = self.authorized_client.get(self.index_url)
+        Post.objects.all().delete()
+        response_after_delete = self.authorized_client.get(self.index_url)
+
+        self.assertEqual(response.content, response_after_delete.content)
+
+        cache.clear()
+        response_after_clear = self.authorized_client.get(self.index_url)
+
+        self.assertNotEqual(response.content, response_after_clear.content)
 
 
 class PostViewPaginatorTests(TestCase):
